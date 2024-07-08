@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<head>
+    <title>ChatGPT Input Form</title>
+</head>
+<body>
+    <form action="/process_input" method="post">
+        <label for="user_input">Enter your text:</label>
+        <textarea id="user_input" name="user_input" rows="4" cols="50"></textarea>
+        <br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <h1>Stored Responses</h1>
+  
+    <hr>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>User Input</th>
+            <th>Response</th>
+            <th>Actions</th>
+        </tr>
+        {% for entry in entries %}
+        <tr>
+            <td>{{ entry[0] }}</td>
+            <td>{{ entry[1] }}</td>
+            <td>{{ entry[2] }}</td>
+            <td>
+                <form method="POST" action="/delete/{{ entry[0] }}" style="display:inline;">
+                    <input type="submit" value="Delete">
+                </form>
+                <form method="POST" action="{{ url_for('parse_entry', entry_id=entry[0]) }}" style="display:inline;">
+                    <input type="submit" value="Parse">
+                </form>
+            </td>
+           
+           
+           
+        
+
+
+            
+
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h1>Parsed Privacy Policies</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Role</th>
+            <th>Purpose</th>
+            <th>Data Attribute</th>
+            <th>Response ID</th>
+        </tr>
+        {% for entry in parsed_entries %}
+        <tr>
+            <td>{{ entry[0] }}</td>
+            <td>{{ entry[1] }}</td>
+            <td>{{ entry[2] }}</td>
+            <td>{{ entry[3] }}</td>
+            <td>{{ entry[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+
+    <h1>Graph</h1>
+    <a href="{{ url_for('graph') }}">View Graph</a>
+
+</body>
+</html>
+
