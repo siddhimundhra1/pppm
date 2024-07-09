@@ -45,7 +45,7 @@
         {% endfor %}
     </table>
 
-    <h1>Parsed Privacy Policies</h1>
+    <!--<h1>Parsed Privacy Policies</h1>
     <table border="1">
         <tr>
             <th>ID</th>
@@ -63,11 +63,20 @@
             <td>{{ entry[4] }}</td>
         </tr>
         {% endfor %}
-    </table>
+    </table>-->
 
 
     <h1>Graph</h1>
-    <a href="{{ url_for('graph') }}">View Graph</a>
+    
+    <form action="{{ url_for('graph') }}" method="GET">
+        <label for="response_id">Enter Response ID:</label>
+        <input type="text" id="response_id" name="response_id" required>
+        <button type="submit">View Graph</button>
+    </form>
+
+    {% if graph_image %}
+    <img src="{{ url_for('static', filename=graph_image) }}" alt="Graph">
+    {% endif %}
 
 </body>
 </html>

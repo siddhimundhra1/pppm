@@ -44,14 +44,15 @@ def process_input():
        "Data attribute: pieces of sensitive information. Data item is an instance of a data attribute. (Attribute: age. Item: 26).\n"
        "Privacy Policy::=(role, purpose, data attribute) Remember these definitions. \n"
        "Convert this natural language into the privacy policy tuples. An example output can look like the following: (Company, to create an account, name) \n"
-       "(Analyzer, to fight spam/malware, IP address)"
+       "(Analyzer, to fight spam/malware, IP address) \n"
+       "(We, to share content, gender) \n"
    )
 
     # Process input with ChatGPT
     completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-           {"role": "system", "content": "You extract (role, purpose, data attribute) tuples from the given privacy policy"},
+           {"role": "system", "content": "You extract (role, purpose, data attribute) tuples from the given privacy policy. Generate tuples strictly based on words explicitly stated in the privacy policy. No numbering or commas in purposes."},
            {"role": "user", "content": prompt + user_input}
         ]
     )
@@ -68,7 +69,8 @@ def process_input():
     connection.commit()
     cursor.close()
     connection.close()
-    return f"Stored response: {chatgpt_response}"
+    return redirect('/')
+    #return f"Stored response: {chatgpt_response}"
 
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
@@ -93,7 +95,7 @@ def parse_entry(entry_id):
     cursor.close()
 
     # Extract tuples from response text
-    parsed_entries = re.findall(r'\(([^)]+)\)', response)
+    parsed_entries = re.findall(r'\(([^)]+)\)', response)  
     parsed_entries = [tuple(entry.split(', ')) for entry in parsed_entries]
 
     connection = mysql.connector.connect(**db_config)
@@ -110,11 +112,12 @@ def parse_entry(entry_id):
     return redirect('/')
 
 
-@app.route('/graph')
+@app.route('/graph', methods=['GET', 'POST'])
 def graph():
+    response_id = request.args.get('response_id')
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-    cursor.execute("SELECT * FROM parsed_responses")
+    cursor.execute("SELECT * FROM parsed_responses WHERE response_id = %s", (response_id,))
     parsed_entries = cursor.fetchall()
     cursor.close()
     connection.close()
@@ -124,21 +127,21 @@ def graph():
 
     # Add nodes and edges
     for entry in parsed_entries:
-        role, purpose, data_attribute, response_id = entry[0],entry[1],entry[2],entry[3]
+        role, purpose, data_attribute = entry[1],entry[2],entry[3]
         G.add_node(role, type='role')
         G.add_node(purpose, type='purpose')
         G.add_node(data_attribute, type='data_attribute')
-        G.add_edges_from([(role, purpose), (purpose, data_attribute)])
+        G.add_edges_from([(role, purpose)],style='dashed')
 
     # Draw the graph
     plt.figure(figsize=(10, 7))
-    pos = nx.spring_layout(G)
+    pos = nx.circular_layout(G, center=[0.5, 0.5])
     
     random.seed(42)
     np.random.seed(42)
 
 
-    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='skyblue', font_size=10, font_weight='bold', edge_color='gray')
+    nx.draw(G, pos, with_labels=True, node_size=3000, node_color='skyblue', font_size=8, font_weight='bold', edge_color='gray')
 
     # Save the graph to a file
     graph_path = 'static/graph.png'
