@@ -9,7 +9,7 @@ import numpy as np
 
 
 # Initialize OpenAI client with your API key
-client = OpenAI(api_key='sk-proj-LKBOtaN9R6rZQZTJV174T3BlbkFJcRypo2abZhqAHK9MiTbE')
+client = OpenAI(api_key='#KEY')
 
 app = Flask(__name__)
 
@@ -163,88 +163,4 @@ if __name__ == '__main__':
 
 
 
-
-#from flask import Flask, request, render_template_string
-#from transformers import pipeline
-#import mysql.connector
-
-# Initialize the text generation pipeline with a pretrained GPT-2 model
-#generator = pipeline('text-generation', model='gpt2')
-#qa_pipeline = pipeline('question-answering',model='gpt2') #no model
-
-
-#app = Flask(__name__)
-
-# Configure MySQL Database
-#db_config = {
-#    'database': 'chatgpt_responses',
- #   'host': 'localhost',
- #   'user': 'root'  
-#}
-
-#@app.route('/')
-#def index():
-#    return render_template_string(open('index.html').read())
-
-
-#@app.route('/process_input', methods=['POST'])
-#def process_input():
-#    user_input = request.form['user_input']
-
-#    prompt = (
- #       "Role: The categories within and beyond the organization that are granted access to private information. (ie Manager, Deliverer, Analyzer, Marketer, User, etc.) People who need the information. \n"
-  #      "Purpose: reason data is needed \n"
-#        "Data attribute: pieces of sensitive information. Data item is an instance of a data attribute. (Attribute: age. Item: 26).\n"
- #       "This is a privacy policy tuple: Privacy Policy::=(role, purpose, data attribute) Remember these definitions. \n"
-  #      "Convert this natural language into the privacy policy tuples." 
-	#"An example output can look like the following: (Company, to create an account, name) \n"
-        #"(Analyzer, to fight spam/malware, IP address)"
-  #  )
-
-
-#    prompt = (
-#"Convert the following natural language into the privacy policy tuples (role, purpose, data attribute):\n\n"
-#    f"Natural Language: \"{user_input}\"\n"
-#    "Privacy Policy Tuples: "
-#)
-
-    # Generate text using the GPT-2 model
-#    generated_text = generator(prompt, max_length=400, num_return_sequences=1)[0]['generated_text'].strip()
-
-
-# Define the question and context
-#    question = "How can we convert the privacy policy into a list of privacy policy tuples that follow the format of (role, purpose, data attribute) using the defintions?"
-	
-#    context = (
-#        "Role: The categories within and beyond the organization that are granted access to private information. (ie Manager, Deliverer, Analyzer, Marketer, User, etc.) People who need the information. \n"
-#        "Purpose: reason data is needed \n"
-#        "Data attribute: pieces of sensitive information. Data item is an instance of a data attribute. (Attribute: age. Item: 26).\n"
-#        "Privacy Policy::=(role, purpose, data attribute) Remember these definitions. \n"
-#        "An example output can look like the following: (Company, to create an account, name) \n"
-#        "(Analyzer, to fight spam/malware, IP address) Here is a privacy policy: \n"
-#    )
-    
-
-    # Generate answer using the question answering model
-#    result = qa_pipeline(question=question, context=context+user_input, max_length=1000)
-
-    # Extract the answer from the result
-#    chatgpt_response = result['answer']
-
-
-    # Store the response in MySQL
-#    connection = mysql.connector.connect(**db_config)
-#    cursor = connection.cursor()
-#    cursor.execute(
-#        "INSERT INTO responses (user_input, chatgpt_response) VALUES (%s, %s)",
-#        (user_input, chatgpt_response)
-#    )
-#    connection.commit()
-#    cursor.close()
-#    connection.close()
-
-#    return f"Stored response: {chatgpt_response}"
-
-#if __name__ == '__main__':
-#    app.run(debug=True)
 
