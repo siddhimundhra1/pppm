@@ -289,12 +289,13 @@ def graph():
     purpose_nodes = set()
     data_attribute_nodes = set()
     # Add nodes and edges
+    k=0
     for entry in parsed_entries:
         role = entry[1].strip()
         purpose = entry[2].strip()
-        data_attribute = entry[3].strip()
+        data_attribute = entry[3].strip()+" "+str(k)
         category = entry[4].strip()
-
+        k+=1
         G.add_node(role, type='role')
         G.add_node(purpose, type='purpose')
         G.add_node(data_attribute, type='data_attribute')
@@ -317,13 +318,15 @@ def graph():
 
     #Define positions
     pos = {}
+    j=0
     for i, node in enumerate(role_nodes):
-        pos[node] = (i+5, 2)  # Top line for roles
+        pos[node] = (i, 2)  # Top line for roles
     for i, node in enumerate(purpose_nodes):
-        pos[node] = (i+1, 1)  # Middle line for purposes
+        pos[node] = (i, 1)  # Middle line for purposes
     for category in categories:
         for i, node in enumerate(categories[category]):
-            pos[node] = (i+1, 0)  # Bottom line for data attributes
+            pos[node] = (i+j, 0)  # Bottom line for data attributes
+        j+=len(categories[category])
 
 
     plt.figure(figsize=(14, 10))
@@ -366,7 +369,7 @@ def graph():
                 category,
                 horizontalalignment='center',
                 verticalalignment='center',
-                fontsize=5,
+                fontsize=8,
                 bbox=dict(facecolor='white', alpha=0.5, edgecolor='none')
             )
 
