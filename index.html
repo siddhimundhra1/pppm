@@ -45,13 +45,14 @@
         {% endfor %}
     </table>
 
-    <!--<h1>Parsed Privacy Policies</h1>
+   <h1>Parsed Privacy Policies</h1>
     <table border="1">
         <tr>
             <th>ID</th>
             <th>Role</th>
             <th>Purpose</th>
             <th>Data Attribute</th>
+            <th>Category</th>
             <th>Response ID</th>
         </tr>
         {% for entry in parsed_entries %}
@@ -61,9 +62,10 @@
             <td>{{ entry[2] }}</td>
             <td>{{ entry[3] }}</td>
             <td>{{ entry[4] }}</td>
+            <td>{{ entry[5] }}</td>
         </tr>
         {% endfor %}
-    </table>-->
+    </table>
 
 
     <h1>Graph</h1>
