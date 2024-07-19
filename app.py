@@ -45,8 +45,8 @@ def process_input():
 
     prompt = (
     "Definition - Role: Those granted access to private information. (ie Manager, Deliverer, Analyzer, Marketer, etc.) People who need the information. \n"
-    "I want you to extract the role, purpose, data attribute, and category from the following natural language privacy policy sentence. "
-    "Use the format provided below for the extraction. If an element is not mentioned, leave it out.\n\n"
+    "I want you to extract the role, purpose, data attribute, and category from the following natural language privacy policy sentence."
+    "Use the format provided below for the extraction. If an element is not mentioned, leave it out. No commas allowed. Response should only consist of tuples.\n\n"
     "Format:\n"
     "(Role: <Role>, Purpose: <Purpose>, [Data Attribute: <Data Attribute>, ...], Category: <Category>)\n\n"
     "Natural Language Sentence: \"The manager needs the user's email address for account verification.\"\n\n"
@@ -109,7 +109,7 @@ def process_input():
     completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-           {"role": "system", "content": "You extract (role, purpose, data attribute) tuples from the given privacy policy. Generate tuples strictly based on words explicitly stated in the privacy policy. No numbering or commas in purposes."},
+           {"role": "system", "content": "You extract (role, purpose, data attribute, category) tuples from the given privacy policy. Generate tuples strictly based on words explicitly stated in the privacy policy. No numbering or commas in purposes."},
            {"role": "user", "content": prompt + user_input}
         ]
     )
@@ -150,6 +150,59 @@ def delete_entry(entry_id):
 
 
 
+def parse_text(text):
+    results = []
+    # Remove leading and trailing whitespace and split by ')'
+    segments = text.strip().split(')')
+
+    for segment in segments:
+        segment = segment.strip()
+        if not segment:
+            continue
+        
+        # Remove leading '('
+        segment = segment[1:].strip()
+        
+        # Extract Data Attributes separately if present
+        data_attributes = ""
+        if "Data Attributes:" in segment:
+            before_data_attrs, after_data_attrs = segment.split("Data Attributes:", 1)
+            data_attributes_part, remaining = after_data_attrs.split(']', 1)
+            data_attributes = data_attributes_part.strip().strip('[]')
+            segment = before_data_attrs.strip() + remaining.strip()
+        
+        # Split the remaining part of the segment by commas
+        fields = segment.split(',')
+        
+        entry = {
+            "Role": "",
+            "Purpose": "",
+            "Data Attributes": data_attributes,  # Use the extracted data attributes
+            "Category": ""
+        }
+
+        for field in fields:
+            if ':' in field:
+                key, value = field.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                if key == 'Role':
+                    entry['Role'] = value
+                elif key == 'Purpose':
+                    entry['Purpose'] = value
+                elif key == 'Category':
+                    entry['Category'] = value
+
+        # Convert entry to tuple in the required format
+        result_tuple = (
+            entry['Role'],
+            entry['Purpose'],
+            entry['Data Attributes'],
+            entry['Category']
+        )
+        results.append(result_tuple)
+
+    return results
 
 
 
@@ -177,17 +230,18 @@ def parse_entry(entry_id):
         cursor.close()
 
         # Define the regex pattern
-        pattern = re.compile(
-    r"\(?(?:\s*Role:\s*(?P<Role>[^,]*)\s*,\s*)?"  # Optional Role
-    r"(?:\s*Purpose:\s*(?P<Purpose>.*?)(?=\s*Data Attributes:))"  # Optional Purpose
-    r"\s*Data Attributes:\s*\[(?P<DataAttributes>[^\]]+)\]\s*,\s*"  # Required Data Attributes
-    r"(?:\s*Category:\s*(?P<Category>[^\)]+)\s*)?"  # Optional Category
-    r"\)?"
-)
-
+        '''pattern = re.compile(
+    r"\s*\("  # Opening parenthesis (mandatory)
+    r"(?:\s*Role:\s*(?P<Role>[^,\)]+?)\s*,\s*)?"  # Optional Role
+    r"(?:\s*Purpose:\s*(?P<Purpose>.*?)(?=\s*(?:Data Attributes:|Category:|\)|$)))\s*"  # Optional Purpose
+    r"(?:\s*Data Attributes:\s*\[(?P<DataAttributes>[^\]]*)\]\s*,\s*)?"  # Optional Data Attributes
+    r"(?:\s*Category:\s*(?P<Category>[^\)\s]+)\s*)?"  # Optional Category
+    r"\)\s*"  # Mandatory closing parenthesis and trailing whitespace
+)'''
         
-        # Extract tuples from response text
-        matches = re.findall(pattern, response)
+
+        matches = parse_text(response)
+        print (matches)
         
         parsed_entries = []
         for match in matches:
@@ -202,14 +256,24 @@ def parse_entry(entry_id):
             # Split the data attributes by comma and strip any extra spaces
             data_attributes_list = [attr.strip() for attr in data_attributes.split(',') if attr]''' 
             role=match[0]
+            if match[0]=='':
+                role="Unknown Role"
             purpose=match[1]
+            if match[1]=='':
+                purpose="Unknown Purpose"
             data_attributes_list=match[2]
+            
             category=match[3]
+            
             data_attributes_list = [attr.strip() for attr in data_attributes_list.split(',') if attr]
 
             for data_attribute in data_attributes_list:
                 parsed_entries.append((role, purpose, data_attribute, category))
+            if len(data_attributes_list)==0:
+                parsed_entries.append((role, purpose, "Unknown Data Attribute", category))
+        
         print (matches)
+        print (parsed_entries)
         # Reconnect and insert data
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
@@ -290,6 +354,7 @@ def graph():
     data_attribute_nodes = set()
     # Add nodes and edges
     k=0
+    print (parsed_entries)
     for entry in parsed_entries:
         role = entry[1].strip()
         purpose = entry[2].strip()
