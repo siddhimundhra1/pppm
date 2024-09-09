@@ -9,38 +9,50 @@ import time
 import requests
 import re
 from collections import defaultdict
+import time
+import plotly.graph_objects as go
 
-
-
-
-def match_role_purpose_attribute(roles, purposes, attributes, text):
-    matched_tuples = []
+def preprocess_text(text):
+    """Preprocess text to handle irregular formatting."""
+    # Remove extra newlines and whitespace
     
-    # Process text with SpaCy to split into sentences
+    text = text.replace('\n', ' ').replace('\r', ' ').strip()
+    return ' '.join(text.split())
+
+def extract_node_sentences(text, G):
+    nlp = spacy.load("en_core_web_sm")  # Load a pre-trained spaCy model
+    text=preprocess_text(text)
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
     
-    # Loop through each sentence to find matches
-    for sentence in sentences:
-        for role in roles:
-            if role in sentence:
-                for purpose in purposes:
-                    if purpose in sentence:
-                        for attribute in attributes:
-                            if attribute in sentence:
-                                # Create the tuple
-                                candidate_tuple = (role, purpose, attribute)
-                                
-                                # Check if it's already in the list
-                                if candidate_tuple not in matched_tuples:
-                                    matched_tuples.append(candidate_tuple)
+    # Initialize a dictionary to map nodes to sentences
+    node_sentences = {}
     
-    return matched_tuples
+    for node in G.nodes():
+        node_type = G.nodes[node].get('type')
+        node_key = node.split(":")[1].strip().lower() if ":" in node else node.strip().lower()
+        
+        if node_type:
+            # Check if node's key exists in the text
+            if node_key in text.strip().lower():
+                # Find the sentence containing the node's key
+                found_sentence = ""
+                for sentence in sentences:
+                    if node_key in sentence.strip().lower():
+                        found_sentence = sentence
+                        break
+                node_sentences[node] = found_sentence
+            else:
+                node_sentences[node] = ""
+    
+    return node_sentences
 
 def match_role_purpose(roles,purposes, text):
     matched_tuples=[]
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
+    roles=[item.split(":")[1].strip() for item in roles if item.split(":")[1].strip().lower() in doc.text.lower()]
+    purposes=[item.split(":")[1].strip() for item in purposes if item.split(":")[1].strip().lower() in doc.text.lower()]
     for sentence in sentences:
         for role in roles:
             if role in sentence:
@@ -55,6 +67,8 @@ def match_purpose_attribute(purposes,attributes, text):
     matched_tuples=[]
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
+    purposes=[item.split(":")[1].strip() for item in purposes if item.split(":")[1].strip().lower() in doc.text.lower()]
+    attributes=[item.split(":")[1].strip() for item in attributes if item.split(":")[1].strip().lower() in doc.text.lower()]
     for sentence in sentences:
         for purpose in purposes:
             if purpose in sentence:
@@ -147,7 +161,7 @@ including us, to identify you and therefore may not be anonymous.
 
 
 # Set your API key
-    api_key = #KEY
+    api_key = #API_KEY
 
 # Set the request URL
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
@@ -158,7 +172,7 @@ including us, to identify you and therefore may not be anonymous.
     }
 
 # Define the payload
-    gem_attribute = "In the context of privacy policies, an attribute refers to pieces of information like 'name' or 'age'. Given the following privacy policy text, identify and list all possible attributes mentioned. Format the output as a comma-separated list enclosed in square brackets, like [attr1, attr2, attr3].\n\n" + text
+    gem_attribute = "In the context of privacy policies, an attribute refers to pieces of information like 'name' or 'age'. Given the following privacy policy text, identify and list all possible attributes mentioned word for word. Format the output as a comma-separated list enclosed in square brackets, like [attr1, attr2, attr3].\n\n" + text
     attr_payload = {
     "contents": [
         {
@@ -168,15 +182,28 @@ including us, to identify you and therefore may not be anonymous.
         }
     ],
     "safetySettings": [
+    
     {
       "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
       "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
     }
   ]
 }
     
     purpose_prompt = (
-    "In the context of privacy policies, a purpose refers to the reasons for collecting and using personal data, such as 'to provide services' or 'to process transactions'. Given the following privacy policy text, identify and list all possible purposes mentioned. Format the output as a semi-colon-separated list enclosed in square brackets, like [purpose1; purpose2; purpose3].\n\n" + text
+    "In the context of privacy policies, a purpose refers to the reasons for collecting and using personal data, such as 'to provide services' or 'to process transactions'. Given the following privacy policy text, identify and list all possible purposes mentioned word for word. Format the output as a semi-colon-separated list enclosed in square brackets, like [purpose1; purpose2; purpose3].\n\n" + text
 )
     purpose_payload = {
     "contents": [
@@ -187,9 +214,22 @@ including us, to identify you and therefore may not be anonymous.
         }
     ],
     "safetySettings": [
+       
     {
       "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
       "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
     }
   ]
 }
@@ -207,9 +247,22 @@ including us, to identify you and therefore may not be anonymous.
         }
     ],
     "safetySettings": [
+        
     {
       "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
       "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
     }
   ]
 }
@@ -225,9 +278,22 @@ including us, to identify you and therefore may not be anonymous.
         }
     ],
     "safetySettings": [
+      
     {
       "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
       "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
     }
   ]
 }
@@ -244,9 +310,22 @@ including us, to identify you and therefore may not be anonymous.
         }
     ],
     "safetySettings": [
+        
     {
       "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
       "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_NONE"
+    },
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_NONE"
     }
   ]
 }
@@ -261,9 +340,10 @@ including us, to identify you and therefore may not be anonymous.
 
 #DATA ATTRIBUTE
     generated_text=""
-    for x in range(3):
+    for x in range(4):
         response = requests.post(url, headers=headers, json=attr_payload)
         response = response.json()
+        print (response)
         generated_text += response['candidates'][0]['content']['parts'][0]['text']
     words = re.findall(r'\[(.*?)\]', generated_text)
     attribute_gen = []
@@ -274,7 +354,7 @@ including us, to identify you and therefore may not be anonymous.
 
 #PURPOSES
     generated_text=""
-    for x in range(3):
+    for x in range(4):
         response = requests.post(url, headers=headers, json=purpose_payload)
         response = response.json()
         generated_text += response['candidates'][0]['content']['parts'][0]['text']
@@ -286,19 +366,21 @@ including us, to identify you and therefore may not be anonymous.
 
 #ROLES
     generated_text=""
-    for x in range(3):
+    for x in range(4):
         response = requests.post(url, headers=headers, json=role_payload)
         response = response.json()
+
         generated_text += response['candidates'][0]['content']['parts'][0]['text']
     words = re.findall(r'\[(.*?)\]', generated_text)
     role_gen = []
     for word in words:
         role_gen.extend(word.strip().split(', '))
     print(role_gen)
-
+    
+    time.sleep(70)
 #ROLE-PURPOSE
     generated_text=""
-    for x in range(3):
+    for x in range(6):
         response = requests.post(url, headers=headers, json=rp_payload)
         response = response.json()
         generated_text += response['candidates'][0]['content']['parts'][0]['text']
@@ -311,9 +393,10 @@ including us, to identify you and therefore may not be anonymous.
 
 #PURPOSE-ATTRIBUTE
     generated_text=""
-    for x in range(3):
+    for x in range(6):
         response = requests.post(url, headers=headers, json=pa_payload)
         response = response.json()
+        print (response)
         generated_text += response['candidates'][0]['content']['parts'][0]['text']
     words = re.findall(r'\([^\)]+\)',generated_text)
     pa_gen = []
@@ -411,7 +494,29 @@ including us, to identify you and therefore may not be anonymous.
 
 
 
-    rp_con=match_role_purpose(subject_phrases,purpose_phrases,text)
+    
+   
+    create_graph(role_dict,purpose_dict,attr_dict,rp_gen,pa_gen, text)
+
+
+
+
+
+
+
+def create_graph(role_dict,purpose_dict,attr_dict,rp_gen,pa_gen,text):
+    # Create a directed graph
+    
+    role_nodes = [item for item in role_dict.keys() if role_dict[item]>=3]
+    purpose_nodes = [item for item in purpose_dict.keys() if purpose_dict[item]>=2]
+    data_attribute_nodes = [item for item in attr_dict.keys() if attr_dict[item]>=3]
+
+        
+
+
+
+
+    rp_con=match_role_purpose(role_nodes,purpose_nodes,text)
     rp_dict={}
     for entry in rp_con:
         if len(entry)>=2:
@@ -428,7 +533,7 @@ including us, to identify you and therefore may not be anonymous.
             else:
                 rp_dict[tup]=1
 
-    pa_con=match_purpose_attribute(purpose_phrases,noun_phrases,text)
+    pa_con=match_purpose_attribute(purpose_nodes,data_attribute_nodes,text)
     pa_dict={}
     for entry in pa_con:
         if len(entry)>=2:
@@ -449,8 +554,9 @@ including us, to identify you and therefore may not be anonymous.
     print("\nRole-Purpose Connections:"+str(rp_dict))
    
     print("\nPurpose-Attribute Connections:"+str(pa_dict))
-   
-    create_graph(role_dict,purpose_dict,attr_dict,rp_dict,pa_dict)
+
+    def wrap_text(text, width=10):
+        return '\n'.join(textwrap.wrap(text, width=width))
 
 
 
@@ -458,103 +564,147 @@ including us, to identify you and therefore may not be anonymous.
 
 
 
-def create_graph(role_dict,purpose_dict,attr_dict,rp_dict,pa_dict):
-    # Create a directed graph
-    G = nx.DiGraph()  # Use DiGraph for directed edges
-    role_nodes = [item for item in role_dict.keys() if role_dict[item]>=3]
-    purpose_nodes = [item for item in purpose_dict.keys() if purpose_dict[item]>=2]
-    data_attribute_nodes = [item for item in attr_dict.keys() if attr_dict[item]>=3]
 
-        
+    G = nx.DiGraph()
 
-
+    # Add role, purpose, and attribute nodes
     for node in role_nodes:
         G.add_node(node, type='role')
     for node in purpose_nodes:
         G.add_node(node, type='purpose')
     for node in data_attribute_nodes:
         G.add_node(node, type='attribute')
-    print (str(G.nodes(data=True)))
 
+    print(str(G.nodes(data=True)))
+
+    
+    nodes_in_edges = set()
+
+    # Add edges between roles and purposes
     for key in rp_dict.keys():
-        if rp_dict[key]>=2:
-            role=key[0]
-            purpose=key[1]
+        role = key[0]
+        purpose = key[1]
+        if rp_dict[key] >= 1 or (role in role_nodes and purpose in purpose_nodes):
             if role not in role_nodes:
                 role_nodes.append(role)
                 G.add_node(role, type='role')
             if purpose not in purpose_nodes:
                 purpose_nodes.append(purpose)
                 G.add_node(purpose, type='purpose')
-            G.add_edge(role, purpose) 
+            G.add_edge(role, purpose)
+            nodes_in_edges.add(role)
+            nodes_in_edges.add(purpose)
 
+    # Add edges between purposes and attributes
     for key in pa_dict.keys():
-        if pa_dict[key]>=2:
-            purpose=key[0]
-            attribute=key[1]
+        purpose = key[0]
+        attribute = key[1]
+        if pa_dict[key] >= 1 or (purpose in purpose_nodes and attribute in data_attribute_nodes):
             if purpose not in purpose_nodes:
                 purpose_nodes.append(purpose)
                 G.add_node(purpose, type='purpose')
             if attribute not in data_attribute_nodes:
                 data_attribute_nodes.append(attribute)
                 G.add_node(attribute, type='attribute')
-            G.add_edge(purpose, attribute) 
+            G.add_edge(purpose, attribute)
+            nodes_in_edges.add(purpose)
+            nodes_in_edges.add(attribute)
 
-    '''for entry in parsed_entries:
-        role = entry[0].strip()
-        purpose = entry[1].strip()
-        data_attribute = entry[2].strip() #+ " " + str(k)
-        k += 1  
-        G.add_node(role, type='role')
-        G.add_node(purpose, type='purpose')
-        G.add_node(data_attribute, type='data_attribute')
-        role_nodes.add(role)
-        purpose_nodes.add(purpose)
-        data_attribute_nodes.add(data_attribute)
-        G.add_edge(role, purpose)
-        G.add_edge(purpose, data_attribute)'''
-    
-
-    # Define positions
+    # Define 3D positions for nodes
     pos = {}
-    #role_nodes = [node for node, attr in G.nodes(data=True) if attr['type'] == 'role']
-    #purpose_nodes = [node for node, attr in G.nodes(data=True) if attr['type'] == 'purpose']
-    #data_attribute_nodes = [node for node, attr in G.nodes(data=True) if attr['type'] == 'attribute']
     for i, node in enumerate(role_nodes):
-        print (str(node)+"\n")
-        pos[node] = (i*2, 2+random.uniform(0,1))  # Top line for roles
+        pos[node] = (i * 2, 2 + random.uniform(0, 1), random.uniform(-1, 1))  # Add Z-coordinate
 
     for i, node in enumerate(purpose_nodes):
-        pos[node] = (2*i, 1)  # Middle line for purposes
+        pos[node] = (2 * i, 1, random.uniform(-1, 1))
 
-    for i,node in enumerate(data_attribute_nodes):
-        pos[node] = (1.5*i, 0)
+    for i, node in enumerate(data_attribute_nodes):
+        pos[node] = (1.5 * i, 0, random.uniform(-1, 1))
 
-    plt.figure(figsize=(20, 10))
-    
-    # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color='purple', node_size=500, alpha=0.8)
-    print (str(G.nodes()))
-    # Draw edges with arrows
-    nx.draw_networkx_edges(G, pos, arrowstyle='-|>', arrowsize=20, edge_color='black')
-    
-    # Draw labels
-    def wrap_text(text, width=10):
-        return '\n'.join(textwrap.wrap(text, width=width))
+    # Extract node coordinates for Plotly
+    x_nodes = [pos[node][0] for node in G.nodes()]
+    y_nodes = [pos[node][1] for node in G.nodes()]
+    z_nodes = [pos[node][2] for node in G.nodes()]
 
-    wrapped_labels = {node: wrap_text(node) for node in G.nodes()}
-    nx.draw_networkx_labels(G, pos, labels=wrapped_labels, font_size=6)
-    
-    ax = plt.gca()
+    # Extract edges and their coordinates
+    edge_x = []
+    edge_y = []
+    edge_z = []
+    for edge in G.edges():
+        x0, y0, z0 = pos[edge[0]]
+        x1, y1, z1 = pos[edge[1]]
+        edge_x += [x0, x1, None]  # None is to break the lines between edges
+        edge_y += [y0, y1, None]
+        edge_z += [z0, z1, None]
 
-    plt.xlim(min(pos.values(), key=lambda x: x[0])[0] - 1, max(pos.values(), key=lambda x: x[0])[0] + 1)
-    plt.ylim(min(pos.values(), key=lambda x: x[1])[1] - 1, max(pos.values(), key=lambda x: x[1])[1] + 1)
+    # Create 3D scatter plot for nodes
+    color_map = {
+    'role': 'purple',      # You can change the color codes
+    'purpose': 'blue',
+    'attribute': 'green'
+}
+
+    # Create lists to store colors based on node types
+    node_colors = []
+    node_sentences=extract_node_sentences(text,G)
+    # Loop through each node and assign color based on the node type
+    node_colors = []
+    for node in G.nodes():
+        node_type = G.nodes[node].get('type', 'role')
+        if node in nodes_in_edges:
+            node_colors.append(color_map.get(node_type, 'gray'))
+        else:
+            node_colors.append('yellow')  # Color for nodes not in any edges
+
+    # Create 3D scatter plot for nodes with different colors
+    node_trace = go.Scatter3d(
+        x=x_nodes, y=y_nodes, z=z_nodes,
+        mode='markers+text',
+        marker=dict(size=10, color=node_colors),  # Use node_colors for each node
+        text=[wrap_text(node) for node in G.nodes()],  # Display wrapped node text on nodes
+        hovertext=[node_sentences.get(node, '') for node in G.nodes()],  # Hover text from sentences
+        textposition='middle center',  # Position the text in the center of the node
+        textfont=dict(size=6, color='black'),  # Customize text size and color
+    )
     
+
+    # Create 3D line plot for edges
+    edge_trace = go.Scatter3d(
+        x=edge_x, y=edge_y, z=edge_z,
+        mode='lines',
+        line=dict(color='black', width=1),
+    )
+
+    # Create the 3D figure
+    fig = go.Figure(data=[edge_trace, node_trace])
+
+    # Set layout for better visualization
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(title='X-axis', showgrid=False, zeroline=False),
+            yaxis=dict(title='Y-axis', showgrid=False, zeroline=False),
+            zaxis=dict(title='Z-axis', showgrid=False, zeroline=False),
+        ),
+        title="3D Graph Visualization",
+        showlegend=False
+    )
+
     # Save the graph to a file
     timestamp = int(time.time())
-    graph_path = f'graph_{timestamp}.png'
-    plt.savefig(graph_path)
-    plt.close()
+    graph_path = f'graph_{timestamp}.html'
+    fig.write_html(graph_path)
+
+    # Show the figure in browser
+    fig.show()
+    # Print out the nodes and their types
+    print("Nodes and their types:")
+    for node, data in G.nodes(data=True):
+        print(f"Node: {node}, Type: {data.get('type')}")
+
+    # Print out the edges between nodes
+    print("\nEdges (role -> purpose -> attribute):")
+    for edge in G.edges():
+        print(f"Edge from {edge[0]} to {edge[1]}")
 
     return graph_path
 
